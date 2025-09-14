@@ -39,9 +39,9 @@ async function loadProfile(token) {
   });
   
 
-console.log(res);
+
     // Results
-    const resultData = await gqlFetch(`{ transaction(
+    const resultData = await gqlFetch(`{transaction(
             where: {
                 _and: [
                     {type: { _iregex: "(^|[^[:alnum:]_])[[:alnum:]_]*skill_[[:alnum:]_]*($|[^[:alnum:]_])" }},
@@ -60,18 +60,11 @@ console.log(res);
             amount
             type
   }}`, {}, token);
-   console.log(resultData);
-   
-    re=[];
 
-    results.forEach(element => {
-       moudule = element.path.split("/");
-      if((moudule.includes('bh-module')&&moudule.length==4)){;
-        re.push(element);
-      }
+      console.log(resultData);
+ 
 
-    })
-
+    // Ratio
      const RatioData = await gqlFetch(`{
       transaction {
         id amount type createdAt path
@@ -95,29 +88,28 @@ console.log(res);
     let downSum = ((downTransactions.reduce((acc, t) => acc + t.amount, 0))/1000000).toFixed(2);
 
     // Clear and render UI
-    app.innerHTML = `
+  app.innerHTML = `
   <div class="fade-in">
-  <nav class="navbar">
-    <ul class="navbar-list">
-      <li class="navbar-title">
-        <h2>Graphql</h2>
-      </li>
-      <li class="navbar-action">
-        <button id="logoutBtn" class="fab">
-          Logout
-        </button>
-      </li>
-    </ul>
-  </nav>
-</div>
+    <nav class="navbar">
+      <ul class="navbar-list">
+        <li class="navbar-title">
+          <h2>Graphql</h2>
+        </li>
+        <li class="navbar-action">
+          <button id="logoutBtn" class="fab">
+            Logout
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </div>
 
+  <header class="text-center" style="text-align: center; margin-bottom: 2rem;"> 
+  </header>
 
-    <header class="text-center" style="text-align: center; margin-bottom: 2rem;">
-      <h1>Welcome, ${user.login}</h1>
-    </header>
-
-    <div class="grid-container">
-    <div class="profile-grid">
+  <div class="grid-container">
+    <div class="profile-section">
+      <div class="profile-grid">
       <!-- Personal Information -->
       <div class="grid-item">
         <div class="grid-item-content">
@@ -159,47 +151,36 @@ console.log(res);
           </div>
         </div>
       </div>
+      </div> <!-- /.profile-grid -->
+    </div> <!-- /.profile-section -->
 
-     <div class="grid-container charts-row" style="
-    margin-top: 2rem;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 1rem;
-">
-</div>
+  <!-- Charts Section -->
+  <div class="charts-section">
+    <div class="charts-row">
+      <!-- XP Progress Line Chart (largest) -->
+      <div class="chart-item chart-box">
+      <h3>XP Progress</h3>
+      <div id="xpChart"></div>
+      </div>
+
+      <!-- Right column: stacked small charts -->
+      <div class="charts-stack">
+        <!-- Audit Ratio Bar Chart (smaller) -->
+        <div class="chart-item chart-box">
+          <h3>Audit Ratio</h3>
+          <div id="pfChart"></div>
+        </div>
+
+        <!-- Skills Spider Chart (smaller) -->
+        <div class="chart-item chart-box">
+          <h3>Skills Overview</h3>
+          <div id="radarChart"></div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="charts-container" style="
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
- 
-">
-
-  <!-- XP Progress Line Chart -->
-  <div class="chart-box" style="
-    background:rgba(248, 248, 248, 0.1);
-    border-radius: 12px;
-    padding: 1rem;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  ">
-    <h3 style="margin-bottom: 1rem;">XP Progress</h3>
-    <div id="xpChart" style="height: 400px;"></div>
-  </div>
-
-  <!-- Audit Ratio Bar Chart -->
-  <div class="chart-box" style="
-    background:rgba(248, 248, 248, 0.1);
-    border-radius: 12px;
-    padding: 1rem;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  ">
-    <h3 style="margin-bottom: 1rem;">Audit Ratio</h3>
-    <div id="pfChart" style="height: 400px;"></div>
-  </div>
-
-</div>
-  
-
 `;
+
 
 
 // Populate the profile
@@ -223,6 +204,7 @@ document.getElementById("logoutBtn").onclick = () => {
 
     drawXPChart("xpChart", res);
     drawXpLines("pfChart", upSum, downSum);
+    drawSpiderChart("radarChart", resultData.transaction);
     
 
 

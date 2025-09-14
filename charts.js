@@ -7,8 +7,8 @@ function drawXPChart(containerId, transactions) {
 
     transactions.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     const container = document.getElementById(containerId);
-    const width = Math.min(500, container.clientWidth);
-    const height = 350;
+    const width = container.clientWidth; // fill available space for largest chart
+    const height = 500; // taller to emphasize XP as the biggest chart
     const pad = 50;
 
     // Prepare cumulative XP data
@@ -95,62 +95,155 @@ function drawXPChart(containerId, transactions) {
 
 
 function drawXpLines(containerId, done, received) {
-    received = Number(received);
-    done = Number(done);
+  // Normalize values
+  received = Number(received) || 0;
+  done = Number(done) || 0;
 
-    const container = document.getElementById(containerId);
-    const width = Math.min(500, container.clientWidth);
-    const height = 150; // total SVG height
-    const barHeight = 20;
-    const gap = 50;
-    const labelWidth = 80; // space for left labels
-    const padding = 25;
+  const container = document.getElementById(containerId);
+  if (!container) return;
 
-    const maxValue = Math.max(received, done, 1);
-    const scale = value => (value / maxValue) * (width - labelWidth - padding);
+  const bounds = container.getBoundingClientRect();
+  const width = Math.max(280, Math.min(640, Math.floor(bounds.width)));
+  const height = 200; // compact height to avoid clipping
+  const barHeight = 18;
+  const gap = 36; // space between bars
+  const labelWidth = 86; // space for left labels
+  const paddingRight = 20; // breathing room on right end
 
-    const receivedLength = scale(received);
-    const doneLength = scale(done);
-    const ratio = received > 0 ? (done / received).toFixed(1) : "0.0";
+  const maxValue = Math.max(received, done, 1);
+  const scale = value => (value / maxValue) * (width - labelWidth - paddingRight);
 
-    // Ratio grading colors
-    let ratioColor = "#6366f1", grade = "";
-    if (ratio <= 0.2) { grade = "Very Low!"; ratioColor = "#ef4444"; }
-    else if (ratio <= 0.5) { grade = "Low"; ratioColor = "#f59e0b"; }
-    else if (ratio <= 0.7) { grade = "Average"; ratioColor = "#22c55e"; }
-    else if (ratio <= 0.9) { grade = "Good"; ratioColor = "#10b981"; }
-    else { grade = "Excellent"; ratioColor = "#059669"; }
+  const receivedLength = scale(received);
+  const doneLength = scale(done);
+  const ratio = received > 0 ? (done / received) : 0;
 
-    // Center the bars vertically
-    const totalBarsHeight = barHeight * 2 + gap;
-    const offsetY = (height - totalBarsHeight) / 2 + barHeight / 2;
+  // Ratio grading colors
+  let ratioColor = "#60a5fa", grade = "";
+  if (ratio <= 0.2) { grade = "Very Low"; ratioColor = "#ef4444"; }
+  else if (ratio <= 0.5) { grade = "Low"; ratioColor = "#f59e0b"; }
+  else if (ratio <= 0.7) { grade = "Average"; ratioColor = "#22c55e"; }
+  else if (ratio <= 0.9) { grade = "Good"; ratioColor = "#10b981"; }
+  else { grade = "Excellent"; ratioColor = "#059669"; }
 
-    const startX = labelWidth;
+  // Vertical positioning
+  const totalBarsHeight = barHeight * 2 + gap;
+  const offsetY = (height - totalBarsHeight) / 2 + barHeight / 2;
+  const startX = labelWidth;
 
-    container.innerHTML = `
-      <svg width="${width}" height="${height}" style="display:block; margin-top:${height/2}; font-family:sans-serif;">
-        <!-- Left labels -->
-        <text x="0" y="${offsetY}" font-size="14" fill="#ffffff" text-anchor="start" alignment-baseline="middle">Received</text>
-        <text x="0" y="${offsetY + gap}" font-size="14" fill="#ffffff" text-anchor="start" alignment-baseline="middle">Done</text>
+  const fmt = (v) => {
+    const n = Number(v) || 0;
+    if (n >= 1000) return n.toFixed(0);
+    if (n >= 100) return n.toFixed(1);
+    return n.toString();
+  };
 
-        <!-- Received bar -->
-        <line x1="${startX}" y1="${offsetY}" x2="${startX + receivedLength}" y2="${offsetY}" 
-              stroke="#6366f1" stroke-width="${barHeight}" stroke-linecap="round"/>
-        <text x="${startX + receivedLength / 2}" y="${offsetY}" font-size="14" fill="#ffffff" text-anchor="middle" alignment-baseline="middle">
-          ${received}
-        </text>
+  container.innerHTML = `
+    <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="font-family: Inter, sans-serif;">
+      <!-- Background band -->
+      <rect x="0" y="0" width="${width}" height="${height}" rx="10" fill="rgba(255,255,255,0.04)" />
 
-        <!-- Done bar -->
-        <line x1="${startX}" y1="${offsetY + gap}" x2="${startX + doneLength}" y2="${offsetY + gap}" 
-              stroke="#4ade80" stroke-width="${barHeight}" stroke-linecap="round"/>
-        <text x="${startX + doneLength / 2}" y="${offsetY + gap}" font-size="14" fill="#ffffff" text-anchor="middle" alignment-baseline="middle">
-          ${done}
-        </text>
+      <!-- Left labels -->
+      <text x="6" y="${offsetY}" font-size="13" fill="#e5e7eb" alignment-baseline="middle">Received</text>
+      <text x="6" y="${offsetY + gap}" font-size="13" fill="#e5e7eb" alignment-baseline="middle">Done</text>
 
-        <!-- Ratio text -->
-        <text x="${width / 2}" y="${offsetY + gap + 45}" font-size="16" font-weight="bold" fill="${ratioColor}" text-anchor="middle">
-          Ratio: ${ratio} ${grade}
-        </text>
-      </svg>
-    `;
+      <!-- Received bar -->
+      <line x1="${startX}" y1="${offsetY}" x2="${startX + receivedLength}" y2="${offsetY}"
+            stroke="#6366f1" stroke-width="${barHeight}" stroke-linecap="round" />
+      <text x="${startX + Math.max(20, receivedLength / 2)}" y="${offsetY}" font-size="12" fill="#ffffff" text-anchor="middle" alignment-baseline="middle">
+        ${fmt(received)}
+      </text>
+
+      <!-- Done bar -->
+      <line x1="${startX}" y1="${offsetY + gap}" x2="${startX + doneLength}" y2="${offsetY + gap}"
+            stroke="#34d399" stroke-width="${barHeight}" stroke-linecap="round" />
+      <text x="${startX + Math.max(20, doneLength / 2)}" y="${offsetY + gap}" font-size="12" fill="#111827" text-anchor="middle" alignment-baseline="middle">
+        ${fmt(done)}
+      </text>
+
+      <!-- Ratio text -->
+      <text x="${width - 8}" y="${offsetY + gap + 34}" font-size="14" font-weight="bold" fill="${ratioColor}" text-anchor="end">
+        Ratio: ${ratio.toFixed(2)} • ${grade}
+      </text>
+    </svg>
+  `;
+
+}
+function drawSpiderChart(containerId, transactions) {
+  // Clean category names: remove leading "skill" and prettify
+  const categories = transactions.map(t => (
+    t.type
+      .replace(/^skill[_-]?/i, "")
+      .replace(/[_\-]/g, " ")
+  ));
+  const amounts = transactions.map(t => t.amount);
+
+  // Wider future-proof range: pad and round up to a nice ceiling
+  const maxAmount = Math.max(...amounts, 0);
+  const niceCeil = (n) => {
+    if (n <= 0) return 10;
+    const exp = Math.pow(10, Math.floor(Math.log10(n)));
+    const scaled = n / exp;
+    let niceScaled;
+    if (scaled <= 1) niceScaled = 1;
+    else if (scaled <= 2) niceScaled = 2;
+    else if (scaled <= 5) niceScaled = 5;
+    else niceScaled = 10;
+    return niceScaled * exp;
+  };
+  const paddedMax = niceCeil(maxAmount * 1.6);
+
+  const options = {
+    chart: {
+      type: 'radar',
+      height: 350, // smaller than XP chart
+      toolbar: { show: false },
+      foreColor: '#e5e7eb'
+    },
+    series: [{
+      name: "XP",
+      data: amounts
+    }],
+    xaxis: {
+      categories: categories,
+      labels: {
+        style: { colors: "#f3f4f6", fontSize: "13px", fontWeight: 600 }
+      }
+    },
+    yaxis: {
+      show: true,
+      min: 0,
+      max: paddedMax,
+      tickAmount: 5,
+      labels: { style: { colors: "#9ca3af" } }
+    },
+    stroke: {
+      width: 2,
+      colors: ["#38bdf8"]
+    },
+    fill: {
+      opacity: 0.3,
+      colors: ["#38bdf8"]
+    },
+    markers: {
+      size: 5,
+      colors: ["#0f172a"],
+      strokeColors: "#38bdf8",
+      strokeWidth: 2
+    },
+    plotOptions: {
+      radar: {
+        polygons: {
+          strokeColors: "rgba(255,255,255,0.1)",
+          connectorColors: "rgba(255,255,255,0.15)"
+        }
+      }
+    },
+    tooltip: {
+      theme: "dark",
+      y: { formatter: (val) => val + " XP" }
+    }
+  };
+
+  const chart = new ApexCharts(document.querySelector(`#${containerId}`), options);
+  chart.render();
 }

@@ -20,6 +20,22 @@ body {
   overflow-x: hidden;
 }
 
+/* Generic containers */
+.grid-container {
+  max-width: 1800px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.section {
+  margin-top: 2rem;
+}
+
+.profile-section { margin-top: 2.5rem; }
+.charts-section { margin-top: 2.5rem; }
+
 /* Animated background */
 body::before {
   content: '';
@@ -225,16 +241,17 @@ form button[type="submit"]:hover {
 .profile-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
+  gap: 2.25rem;
   margin-top: 3rem;
-  max-width: 1500px;
+  max-width: 1750px;
   margin-left: auto;
   margin-right: auto;
 }
 
 /* SHARED CARD STYLING for both profile and chart items */
 .grid-item,
-.chart-item {
+.chart-item,
+.chart-box {
   background: rgba(248, 248, 248, 0.1);
   backdrop-filter: blur(15px);
   padding: 1.5rem;
@@ -249,6 +266,9 @@ form button[type="submit"]:hover {
   flex-direction: column;
   height: 100%; /* Ensures all cards take full height of grid row */
 }
+
+/* Ensure chart cards allow tooltips/hover overflow */
+.chart-box { overflow: hidden; }
 
 /* Animation delays */
 .grid-item:nth-child(1) { animation-delay: 0.1s; }
@@ -267,9 +287,13 @@ form button[type="submit"]:hover {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transition: left 0.5s;
+  pointer-events: none; /* don't block chart hover/tooltip */
 }
+
+/* Disable shimmer overlay on charts to avoid white flash */
+.chart-item::before { display: none; }
 
 .grid-item:hover::before,
 .chart-item:hover::before {
@@ -278,7 +302,7 @@ form button[type="submit"]:hover {
 
 .grid-item:hover,
 .chart-item:hover {
-  transform: translateY(-8px) scale(1.02);
+  transform: translateY(-6px); /* remove scale to prevent clipping */
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
   border-color: rgba(99, 102, 241, 0.3);
 }
@@ -292,19 +316,35 @@ form button[type="submit"]:hover {
   animation: none; /* Override global h3 animation */
 }
 
-/* CHARTS ROW - 2 Equal Charts */
+/* Charts row: XP larger, others smaller in same row */
 .charts-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 1fr; /* XP chart left, stacked charts right */
   gap: 2.5rem;
   margin-top: 3rem;
-  max-width: 1500px;
+  max-width: 1750px;
   margin-left: auto;
   margin-right: auto;
+  align-items: start; /* prevent stretching that can clip stacked charts */
+}
+
+/* Right column stack: Ratio above Skills */
+.charts-stack {
+  display: grid;
+  grid-template-rows: auto auto; /* let each chart size naturally */
+  gap: 2rem;
+}
+
+/* Allow stacked charts to render fully (tooltips, etc.) */
+.charts-stack .chart-box {
+  overflow: hidden;
 }
 
 .chart-item {
-  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* avoid vertical centering that can cause clipping */
+  min-height: 0; /* let individual charts define their own height */
 }
 
 /* Profile Details */
@@ -489,7 +529,8 @@ form button[type="submit"]:hover {
     gap: 1.5rem;
   }
   
-  .charts-container {
+  .charts-container,
+  .charts-row {
     grid-template-columns: 1fr !important;
     gap: 2rem !important;
   }
@@ -510,7 +551,8 @@ form button[type="submit"]:hover {
   h3 { font-size: 1.25rem; }
   
   .grid-container,
-  .charts-container {
+  .charts-container,
+  .charts-row {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;
     margin-top: 1.5rem !important;
@@ -566,39 +608,51 @@ form button[type="submit"]:hover {
   }
 }
 /* Make charts visually larger and consistent */
-#xpChart,
-#pfChart {
+/* Make XP chart bigger */
+#xpChart {
   width: 100%;
   height: 100%;
-  min-height: 400px;
+  min-height: 520px; /* reduce empty space a bit more */
   animation: fadeInUp 0.8s ease-out both;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible; /* allow tooltip overflow */
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(236, 72, 153, 0.05));
+  padding: 0.75rem; /* tighten padding */
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* Hover zoom/glow effect */
-#xpChart:hover,
-#pfChart:hover {
-  transform: scale(1.02);
-  box-shadow: 0 15px 35px -5px rgba(99, 102, 241, 0.5);
+#xpChart:hover {
+  transform: scale(1.03);
+  box-shadow: 0 20px 40px -5px rgba(99, 102, 241, 0.6);
 }
 
-/* Add subtle gradient background inside charts */
-#xpChart,
-#pfChart {
+/* Keep pfChart and radarChart smaller */
+#pfChart,
+#radarChart {
+  width: 100%;
+  height: 100%;
+  min-height: 450px;
+  animation: fadeInUp 0.8s ease-out both;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 12px;
+  overflow: visible; /* allow tooltip overflow */
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(236, 72, 153, 0.05));
   padding: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* Ensure chart containers stretch nicely */
-.chart-item {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 500px; /* bigger than before */
+/* Make Ratio smaller so Skills fits better */
+#pfChart { min-height: 220px; }
+#radarChart { min-height: 520px; }
+
+#pfChart:hover,
+#radarChart:hover {
+  transform: scale(1.02);
+  box-shadow: 0 15px 35px -5px rgba(99, 102, 241, 0.5);
 }
+
+/* (moved and consolidated charts-row and chart-item rules above) */
 .navbar {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -647,4 +701,3 @@ form button[type="submit"]:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
 }
-

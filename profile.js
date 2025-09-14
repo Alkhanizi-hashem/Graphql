@@ -39,13 +39,29 @@ async function loadProfile(token) {
   });
   
 
-
+console.log(res);
     // Results
-    const resultData = await gqlFetch(`{
-      progress { id grade userId createdAt path }
-    }`, {}, token);
+    const resultData = await gqlFetch(`{ transaction(
+            where: {
+                _and: [
+                    {type: { _iregex: "(^|[^[:alnum:]_])[[:alnum:]_]*skill_[[:alnum:]_]*($|[^[:alnum:]_])" }},
+                    {type: {_like: "%skill%"}},
+                    {object: {type: {_eq: "project"}}},
+                    {type: {_in: [
+                        "skill_prog", "skill_algo", "skill_sys-admin", "skill_front-end", 
+                        "skill_back-end", "skill_stats", "skill_ai", "skill_game", 
+                        "skill_tcp"
+                    ]}}
+                ]
+            }
+            order_by: [{type: asc}, {createdAt: desc}]
+            distinct_on: type
+        ) {
+            amount
+            type
+  }}`, {}, token);
+   console.log(resultData);
    
-    const results = resultData.progress.filter(r => r.userId == user.id);
     re=[];
 
     results.forEach(element => {

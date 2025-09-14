@@ -620,12 +620,15 @@ form button[type="submit"]:hover {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(236, 72, 153, 0.05));
   padding: 0.75rem; /* tighten padding */
   border: 1px solid rgba(255, 255, 255, 0.15);
+  position: relative; /* for tooltip positioning */
 }
 
 #xpChart:hover {
   transform: scale(1.03);
   box-shadow: 0 20px 40px -5px rgba(99, 102, 241, 0.6);
 }
+
+#xpChart .xp-point { cursor: pointer; }
 
 /* Keep pfChart and radarChart smaller */
 #pfChart,
@@ -640,6 +643,22 @@ form button[type="submit"]:hover {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(236, 72, 153, 0.05));
   padding: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Tooltip for SVG-based XP chart */
+.chart-tooltip {
+  position: absolute;
+  z-index: 10;
+  padding: 8px 10px;
+  background: rgba(17, 24, 39, 0.92);
+  color: #f9fafb;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+  pointer-events: none;
+  transform: translate(-50%, -120%);
+  white-space: nowrap;
+  font-size: 12px;
 }
 
 /* Make Ratio smaller so Skills fits better */

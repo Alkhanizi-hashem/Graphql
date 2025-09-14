@@ -46,7 +46,6 @@ function drawXPChart(containerId, transactions) {
         const y = pad + (height - 2 * pad) * i / 5;
         const value = Math.round(maxXP * (5 - i) / 5);
         gridLines += `<line x1="${pad}" y1="${y}" x2="${width - pad}" y2="${y}" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="3,3"/>`;
-        yLabels += `<text x="${pad - 10}" y="${y + 5}" fill="rgba(255,255,255,0.7)" font-size="12" text-anchor="end">${value}</text>`;
     }
 
     // X labels
@@ -59,11 +58,18 @@ function drawXPChart(containerId, transactions) {
         xLabels += `<text x="${x}" y="${height - pad + 20}" fill="rgba(255,255,255,0.7)" font-size="12" text-anchor="middle">${date.toLocaleDateString()}</text>`;
     }
 
-    // Data points
+    // Data points with hover tooltips
+    const fmt = (n) => new Intl.NumberFormat().format(Math.round(n));
     let dataPointsHTML = "";
     dataPoints.forEach(p => {
         const x = scaleX(p.timestamp), y = scaleY(p.total);
-        dataPointsHTML += `<circle cx="${x}" cy="${y}" r="5" fill="#63ccecff" stroke="white" stroke-width="2"></circle>`;
+        const labelDate = p.date.toLocaleDateString();
+        dataPointsHTML += `
+          <circle class="xp-point" cx="${x}" cy="${y}" r="5"
+                  fill="#000000ff" stroke="#38bdf8" stroke-width="2"
+                  data-date="${labelDate}"
+                  data-xp="${fmt(p.xp)}"
+                  data-total="${fmt(p.total)}"></circle>`;
     });
 
     // Axes
@@ -85,10 +91,39 @@ function drawXPChart(containerId, transactions) {
             ${axes}
             ${gridLines}${yLabels}${xLabels}
             <path d="${areaPath}" fill="url(#xpGradient)" opacity="0.7"/>
-            <path d="${linePath}" fill="none" stroke="#40cad9ff" stroke-width="2" style="filter: drop-shadow(0 0 6px #40cad9)"/>
+            <path d="${linePath}" fill="none" stroke="#38bdf8" stroke-width="2" style="filter: drop-shadow(0 0 6px #40cad9)"/>
             ${dataPointsHTML}
         </svg>
+        <div class="chart-tooltip" style="display:none;"></div>
     `;
+
+    // Interactive tooltip behavior
+    container.style.position = 'relative';
+    const tooltip = container.querySelector('.chart-tooltip');
+    const circles = container.querySelectorAll('circle.xp-point');
+    circles.forEach(c => {
+        c.addEventListener('mouseenter', (e) => {
+            const date = c.getAttribute('data-date');
+            const xp = c.getAttribute('data-xp');
+            const total = c.getAttribute('data-total');
+            tooltip.innerHTML = `
+              <div><strong>${date}</strong></div>
+              <div>XP gained: ${xp}</div>
+              <div>Total XP: ${total}</div>
+            `;
+            tooltip.style.display = 'block';
+        });
+        c.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            const left = Math.min(rect.width - 10, Math.max(10, e.clientX - rect.left + 12));
+            const top = Math.min(rect.height - 10, Math.max(10, e.clientY - rect.top - 12));
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        });
+        c.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+        });
+    });
 }
 
 

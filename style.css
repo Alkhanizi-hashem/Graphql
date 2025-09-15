@@ -193,7 +193,7 @@ form textarea {
   transition: all 0.3s ease-in-out;
   background-color: rgba(249, 250, 251, 0.8);
   box-sizing: border-box;
-  color:black;
+  color:#0f0c29;
 }
 
 form input:focus,

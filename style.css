@@ -193,7 +193,7 @@ form textarea {
   transition: all 0.3s ease-in-out;
   background-color: rgba(249, 250, 251, 0.8);
   box-sizing: border-box;
-  color:#0f0c29;
+  color: #0f0c29;
 }
 
 form input:focus,
@@ -205,6 +205,7 @@ form textarea:not(:placeholder-shown) {
   background-color: #ffffff;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
   transform: translateY(-1px);
+  color: #0f0c29;
 }
 
 form input:focus + label,
@@ -218,7 +219,8 @@ form textarea:not(:placeholder-shown) + label {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-}
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0 0.25rem;}
 
 form button[type="submit"] {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
@@ -272,6 +274,12 @@ form button[type="submit"]:hover {
   flex-direction: column;
   height: 100%; /* Ensures all cards take full height of grid row */
 }
+
+/* Stretch columns so bottoms align; right stack splits height equally */
+.charts-row { align-items: stretch; }
+.charts-row .chart-item,
+.charts-row .chart-box { height: 100%; }
+.charts-stack { height: 100%; grid-template-rows: 1fr 1fr; }
 
 /* Ensure chart cards allow tooltips/hover overflow */
 .chart-box { overflow: hidden; }
@@ -618,13 +626,13 @@ form button[type="submit"]:hover {
 #xpChart {
   width: 100%;
   height: 100%;
-  min-height: 520px; /* reduce empty space a bit more */
+  min-height: 560px; /* larger baseline to avoid looking cramped */
   animation: fadeInUp 0.8s ease-out both;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border-radius: 12px;
   overflow: visible; /* allow tooltip overflow */
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(236, 72, 153, 0.05));
-  padding: 0.75rem; /* tighten padding */
+  padding: 0.5rem; /* tighten padding further */
   border: 1px solid rgba(255, 255, 255, 0.15);
   position: relative; /* for tooltip positioning */
 }
@@ -668,8 +676,8 @@ form button[type="submit"]:hover {
 }
 
 /* Make Ratio smaller so Skills fits better */
-#pfChart { min-height: 220px; }
-#radarChart { min-height: 520px; }
+#pfChart { min-height: 220px; height: 100%; }
+#radarChart { min-height: 440px; height: 100%; }
 
 #pfChart:hover,
 #radarChart:hover {

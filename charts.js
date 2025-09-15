@@ -8,7 +8,8 @@ function drawXPChart(containerId, transactions) {
     transactions.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     const container = document.getElementById(containerId);
     const width = container.clientWidth; // fill available space for largest chart
-    const height = 500; // taller to emphasize XP as the biggest chart
+    // Make chart taller to reduce empty margins and improve readability
+    const height = Math.max(440, Math.min(700, Math.round(width * 0.56)));
     const pad = 50;
 
     // Prepare cumulative XP data
@@ -27,35 +28,47 @@ function drawXPChart(containerId, transactions) {
     const maxDate = dataPoints[dataPoints.length - 1].timestamp;
     const maxXP = Math.max(...dataPoints.map(d => d.total));
 
+    // Reserve space for x-axis labels; define plot bounds
+    const plotTop = pad;
+    const plotBottom = height - (pad + 32);
+    const plotHeight = plotBottom - plotTop;
+
     const scaleX = t => pad + (t - minDate) / (maxDate - minDate) * (width - 2 * pad);
-    const scaleY = xp => height - pad - (xp / maxXP) * (height - 2 * pad);
+    const scaleY = xp => plotBottom - (xp / maxXP) * plotHeight;
 
     // Draw line and area
     let linePath = "";
-    let areaPath = `M ${scaleX(dataPoints[0].timestamp)} ${height - pad}`;
+    let areaPath = `M ${scaleX(dataPoints[0].timestamp)} ${plotBottom}`;
     dataPoints.forEach((p, i) => {
         const x = scaleX(p.timestamp), y = scaleY(p.total);
         linePath += `${i === 0 ? "M" : "L"} ${x} ${y}`;
         areaPath += ` L ${x} ${y}`;
     });
-    areaPath += ` L ${scaleX(dataPoints[dataPoints.length - 1].timestamp)} ${height - pad} Z`;
+    areaPath += ` L ${scaleX(dataPoints[dataPoints.length - 1].timestamp)} ${plotBottom} Z`;
 
     // Grid lines and Y labels
     let gridLines = "", yLabels = "";
     for (let i = 0; i <= 5; i++) {
-        const y = pad + (height - 2 * pad) * i / 5;
+        const y = plotTop + plotHeight * i / 5;
         const value = Math.round(maxXP * (5 - i) / 5);
+        const labelY = Math.min(plotBottom - 6, Math.max(plotTop + 6, y));
         gridLines += `<line x1="${pad}" y1="${y}" x2="${width - pad}" y2="${y}" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="3,3"/>`;
+        yLabels += `<text x="${pad + 6}" y="${labelY}" fill="rgba(255,255,255,0.85)" font-size="11" text-anchor="start" alignment-baseline="middle">${new Intl.NumberFormat().format(value)}</text>`;
     }
 
-    // X labels
+    // X labels (avoid clipping at edges)
     let xLabels = "";
-    const labelCount = 4;
+    const labelCount = width < 520 ? 3 : 5;
     for (let i = 0; i <= labelCount; i++) {
         const t = minDate + (maxDate - minDate) * i / labelCount;
         const x = scaleX(t);
         const date = new Date(t);
-        xLabels += `<text x="${x}" y="${height - pad + 20}" fill="rgba(255,255,255,0.7)" font-size="12" text-anchor="middle">${date.toLocaleDateString()}</text>`;
+        let anchor = 'middle';
+        let dx = 0;
+        if (i === 0) { anchor = 'start'; dx = 6; }
+        else if (i === labelCount) { anchor = 'end'; dx = -6; }
+        const fontSize = width < 420 ? 10 : 12;
+        xLabels += `<text x="${x}" y="${plotBottom + 26}" dx="${dx}" fill="rgba(255,255,255,0.9)" font-size="${fontSize}" text-anchor="${anchor}">${date.toLocaleDateString()}</text>`;
     }
 
     // Data points with hover tooltips
@@ -75,11 +88,12 @@ function drawXPChart(containerId, transactions) {
     // Axes
     let axes = `
         <!-- Y-axis -->
-        <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" stroke="#8b5cf6" stroke-width="2"/>
+        <line x1="${pad}" y1="${plotTop}" x2="${pad}" y2="${plotBottom}" stroke="#8b5cf6" stroke-width="2"/>
         <!-- X-axis -->
-        <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" stroke="#8b5cf6" stroke-width="2"/>
+        <line x1="${pad}" y1="${plotBottom}" x2="${width - pad}" y2="${plotBottom}" stroke="#8b5cf6" stroke-width="2"/>
     `;
 
+    container.style.height = height + 'px';
     container.innerHTML = `
         <svg width="${width}" height="${height}">
             <defs>
@@ -124,6 +138,19 @@ function drawXPChart(containerId, transactions) {
             tooltip.style.display = 'none';
         });
     });
+
+    // Debounced resize handler to re-render the SVG when layout changes
+    if (container._xpResize) {
+        window.removeEventListener('resize', container._xpResize);
+    }
+    container._xpResize = (() => {
+        let timer;
+        return () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => drawXPChart(containerId, transactions), 150);
+        };
+    })();
+    window.addEventListener('resize', container._xpResize);
 }
 
 
@@ -204,81 +231,113 @@ function drawXpLines(containerId, done, received) {
 
 }
 function drawSpiderChart(containerId, transactions) {
-  // Clean category names: remove leading "skill" and prettify
-  const categories = transactions.map(t => (
-    t.type
-      .replace(/^skill[_-]?/i, "")
-      .replace(/[_\-]/g, " ")
-  ));
-  const amounts = transactions.map(t => t.amount);
+  const el = document.getElementById(containerId);
+  if (!el) return;
 
-  // Wider future-proof range: pad and round up to a nice ceiling
-  const maxAmount = Math.max(...amounts, 0);
+  // Clean category names and values
+  const categories = transactions.map(t => (
+    t.type.replace(/^skill[_-]?/i, '').replace(/[_\-]/g, ' ')
+  ));
+  const values = transactions.map(t => t.amount);
+
+  // Responsive dimensions
+  const bounds = el.getBoundingClientRect();
+  const width = Math.max(360, Math.floor(bounds.width || 560));
+  const height = Math.max(320, Math.min(520, Math.round(width * 0.72)));
+  const cx = width / 2;
+  const cy = height / 2 + 6; // nudge down to keep top labels inside
+  const margin = 48; // a bit more side margin to keep long labels in-bounds
+  const radius = Math.min(width, height) / 2 - margin;
+
+  // Nice padded max for future-proof range
+  const maxVal = Math.max(...values, 0);
   const niceCeil = (n) => {
     if (n <= 0) return 10;
     const exp = Math.pow(10, Math.floor(Math.log10(n)));
     const scaled = n / exp;
-    let niceScaled;
-    if (scaled <= 1) niceScaled = 1;
-    else if (scaled <= 2) niceScaled = 2;
-    else if (scaled <= 5) niceScaled = 5;
-    else niceScaled = 10;
-    return niceScaled * exp;
+    const step = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10;
+    return step * exp;
   };
-  const paddedMax = niceCeil(maxAmount * 1.6);
+  const paddedMax = niceCeil(maxVal * 1.6);
+  const toR = (val) => (val / paddedMax) * radius;
 
-  const options = {
-    chart: {
-      type: 'radar',
-      height: 350, // smaller than XP chart
-      toolbar: { show: false },
-      foreColor: '#e5e7eb'
-    },
-    series: [{
-      name: "XP",
-      data: amounts
-    }],
-    xaxis: {
-      categories: categories,
-      labels: {
-        style: { colors: "#f3f4f6", fontSize: "13px", fontWeight: 600 }
-      }
-    },
-    yaxis: {
-      show: true,
-      min: 0,
-      max: paddedMax,
-      tickAmount: 5,
-      labels: { style: { colors: "#9ca3af" } }
-    },
-    stroke: {
-      width: 2,
-      colors: ["#38bdf8"]
-    },
-    fill: {
-      opacity: 0.3,
-      colors: ["#38bdf8"]
-    },
-    markers: {
-      size: 5,
-      colors: ["#0f172a"],
-      strokeColors: "#38bdf8",
-      strokeWidth: 2
-    },
-    plotOptions: {
-      radar: {
-        polygons: {
-          strokeColors: "rgba(255,255,255,0.1)",
-          connectorColors: "rgba(255,255,255,0.15)"
-        }
-      }
-    },
-    tooltip: {
-      theme: "dark",
-      y: { formatter: (val) => val + " XP" }
+  const n = Math.max(1, categories.length);
+  const angleFor = i => (-Math.PI / 2) + (2 * Math.PI * i / n);
+  const point = (i, r) => {
+    const a = angleFor(i);
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  };
+
+  // Rings
+  let rings = '';
+  const levels = 5;
+  for (let l = 1; l <= levels; l++) {
+    const r = (radius * l) / levels;
+    let d = '';
+    for (let i = 0; i < n; i++) {
+      const p = point(i, r);
+      d += `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y} `;
     }
-  };
+    d += 'Z';
+    rings += `<path d="${d}" fill="none" stroke="rgba(255,255,255,0.12)" />`;
+  }
 
-  const chart = new ApexCharts(document.querySelector(`#${containerId}`), options);
-  chart.render();
+  // Axes
+  let axes = '';
+  for (let i = 0; i < n; i++) {
+    const p = point(i, radius);
+    axes += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="rgba(255,255,255,0.2)" />`;
+  }
+
+  // Labels (clamped inside viewBox)
+  let labels = '';
+  const labelFont = width < 520 ? 11 : 12;
+  for (let i = 0; i < n; i++) {
+    const a = angleFor(i);
+    const pr = radius + 12;
+    let px = cx + pr * Math.cos(a);
+    let py = cy + pr * Math.sin(a);
+    let anchor = (Math.cos(a) > 0.3) ? 'start' : (Math.cos(a) < -0.3) ? 'end' : 'middle';
+    const dy = Math.sin(a) > 0.5 ? 10 : (Math.sin(a) < -0.5 ? -6 : 4);
+    const padX = 12; // clamp a bit more to keep long words like "back end"
+    if (px < padX) { px = padX; anchor = 'start'; }
+    if (px > width - padX) { px = width - padX; anchor = 'end'; }
+    labels += `<text x="${px}" y="${py + dy}" text-anchor="${anchor}" fill="#e5e7eb" font-size="${labelFont}" font-weight="600">${categories[i]}</text>`;
+  }
+
+  // Data polygon and markers
+  let poly = '';
+  let markers = '';
+  for (let i = 0; i < n; i++) {
+    const pr = toR(values[i]);
+    const p = point(i, pr);
+    poly += `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y} `;
+    markers += `<circle cx="${p.x}" cy="${p.y}" r="4" fill="#0f172a" stroke="#38bdf8" stroke-width="2" />`;
+  }
+  poly += 'Z';
+
+  // Radial tick labels (top axis)
+  let ticks = '';
+  for (let l = 1; l <= levels; l++) {
+    const val = Math.round((paddedMax * l) / levels);
+    const py = cy - ((radius * l) / levels);
+    ticks += `<text x="${cx}" y="${py - 4}" fill="rgba(229,231,235,0.8)" font-size="10" text-anchor="middle">${val}</text>`;
+  }
+
+  // Render SVG
+  el.innerHTML = `
+    <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: Inter, sans-serif;">
+      ${rings}
+      ${axes}
+      <path d="${poly}" fill="rgba(56,189,248,0.25)" stroke="#38bdf8" stroke-width="2" />
+      ${markers}
+      ${labels}
+      ${ticks}
+    </svg>
+  `;
+
+  // Re-render on resize to keep labels visible when layout changes
+  if (el._spiderResize) window.removeEventListener('resize', el._spiderResize);
+  el._spiderResize = (() => { let t; return () => { clearTimeout(t); t = setTimeout(() => drawSpiderChart(containerId, transactions), 150); }; })();
+  window.addEventListener('resize', el._spiderResize);
 }

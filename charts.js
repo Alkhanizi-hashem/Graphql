@@ -197,7 +197,7 @@ function drawXpLines(containerId, done, received) {
 
       <!-- Ratio text -->
       <text x="${width - 8}" y="${offsetY + gap + 34}" font-size="14" font-weight="bold" fill="${ratioColor}" text-anchor="end">
-        Ratio: ${ratio.toFixed(2)} • ${grade}
+        Ratio: ${ratio.toFixed(1)} • ${grade}
       </text>
     </svg>
   `;
